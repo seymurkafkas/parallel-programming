@@ -1,6 +1,12 @@
 #include <mpi.h>
 #include <stdio.h>
 
+typedef struct Matrix
+{
+    float **entries;
+    int dimensions;
+} Matrix;
+
 int indexAt(int row, int column, Matrix *m)
 {
     return m->dimension * row + column;
