@@ -7,6 +7,10 @@ typedef struct Matrix
     int dimensions;
 } Matrix;
 
+void multiplyMatrices(Matrix *first, Matrix *second)
+{
+}
+
 int indexAt(int row, int column, Matrix *m)
 {
     return m->dimension * row + column;
