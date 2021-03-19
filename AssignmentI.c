@@ -25,6 +25,14 @@ int main(int argc, char **argv)
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
 
+    // Get the number of processes
+    int processCount;
+    MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+
+    // Get the rank of the process
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    int token;
     // Finalize the MPI environment.
     MPI_Finalize();
 }
