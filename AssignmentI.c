@@ -7,6 +7,10 @@ typedef struct Matrix
     int dimensions;
 } Matrix;
 
+void readInput()
+{
+}
+
 void multiplyMatrices(Matrix *first, Matrix *second)
 {
 }
