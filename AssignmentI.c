@@ -1,3 +1,7 @@
+/* Fox's Algorithm for Matrix Multiplication
+ *    Author: Seymur Kafkas
+ */
+
 #include <mpi.h>
 #include <stdio.h>
 
