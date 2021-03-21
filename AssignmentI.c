@@ -7,12 +7,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-typedef struct
-{
-    float **entries;
-    int dimensions;
-} Matrix;
-
 #define MAX 65536
 typedef struct
 {
@@ -33,20 +27,63 @@ typedef struct
     int rowNumber;
     int columnNumber;
 } GridInfo;
-void readInputMatrix()
-{
-}
 
+void readInputMatrix(
+    char *text /* in  */,
+    float *localA /* out */,
+    GridInfo *grid /* in  */,
+    int n /* in  */)
+{
+    int mat_row, mat_col;
+    int dest;
+    int coords[2];
+    float temp;
+    MPI_Status status;
+
+    if (grid->myRank == 0)
+    {
+        printf("%s\n", text);
+        fflush(stdout);
+        for (mat_row = 0; mat_row < n; mat_row++)
+        {
+            coords[0] = mat_row;
+            for (mat_col = 0; mat_col < grid->gridOrder; mat_col++)
+            {
+                coords[1] = mat_col;
+                MPI_Cart_rank(grid->gridComm, coords, &dest);
+                if (dest == 0)
+                {
+                    printf("Enter for process %d  \n:", dest);
+                    scanf("%f",
+                          localA);
+                }
+                else
+                {
+                    printf("Enter for process %d  \n:", dest);
+                    scanf("%f", &temp);
+                    MPI_Send(&temp, 1, MPI_FLOAT, dest, 0,
+                             grid->gridComm);
+                }
+            }
+        }
+    }
+    else
+    {
+        MPI_Recv(localA, 1, MPI_FLOAT, 0, 0, grid->gridComm, &status);
+    }
+}
+/* 
 LocalMatrix *allocateLocalMatrix(int localOrder)
 {
     LocalMatrix *temp = (LocalMatrix *)malloc(sizeof(LocalMatrix));
     return temp;
-} /* Local_matrix_allocate */
+}
 
-void freeLocalMatrix(LocalMatrix *pointerToMatrix /* in/out */)
+void freeLocalMatrix(LocalMatrix *pointerToMatrix )
 {
     free(pointerToMatrix);
-} /* Free_local_matrix */
+}
+ */
 
 void initialiseGrid(
     GridInfo *grid /* out */)
@@ -90,58 +127,50 @@ void initialiseGrid(
                  &(grid->columnComm));
 }
 
-void multiplyMatrices(Matrix *first, Matrix *second)
-{
-}
-
 void Fox(
     int n /* in  */,
     GridInfo *grid /* in  */,
-    LocalMatrix *localA /* in  */,
-    LocalMatrix *localB /* in  */,
-    LocalMatrix *localC /* out */)
+    float *localA /* in  */,
+    float *localB /* in  */,
+    float *localC /* out */)
 {
 
-    LocalMatrix *tempA; /* Storage for the sub-    */
-                            /* matrix of A used during */
-                            /* the current stage       */
+    int tempA;
     int stage;
-    int bcast_root;
-    int n_bar; /* n/sqrt(p)               */
+    int broadcastSource;
     int source;
     int dest;
     MPI_Status status;
-
-    n_bar = n / grid->gridOrder;
-    Set_to_zero(local_C);
+    *localC = 0;
 
     /* Calculate addresses for circular shift of B */
-    source = (grid->my_row + 1) % grid->q;
-    dest = (grid->my_row + grid->q - 1) % grid->q;
+    source = (grid->rowNumber + 1) % grid->gridOrder;
+    dest = (grid->rowNumber + grid->gridOrder - 1) % grid->gridOrder;
 
     /* Set aside storage for the broadcast block of A */
-    temp_A = Local_matrix_allocate(n_bar);
 
-    for (stage = 0; stage < grid->q; stage++)
+    for (stage = 0; stage < grid->gridOrder; ++stage)
     {
-        bcast_root = (grid->my_row + stage) % grid->q;
-        if (bcast_root == grid->my_col)
+        broadcastSource = (grid->rowNumber + stage) % grid->gridOrder;
+        if (broadcastSource == grid->columnNumber)
         {
-            MPI_Bcast(local_A, 1, local_matrix_mpi_t,
-                      bcast_root, grid->row_comm);
-            Local_matrix_multiply(local_A, local_B,
-                                  local_C);
+            MPI_Bcast(localA, 1, MPI_FLOAT,
+                      broadcastSource, grid->rowComm);
+            *localC += *localA + *localB;
+            printf("Result: %f \n",*localC);
         }
         else
         {
-            MPI_Bcast(temp_A, 1, local_matrix_mpi_t,
-                      bcast_root, grid->row_comm);
-            Local_matrix_multiply(temp_A, local_B,
-                                  local_C);
+            MPI_Bcast(&tempA, 1, MPI_FLOAT,
+                      broadcastSource, grid->rowComm);
+            *localC += tempA + *localB;
         }
-        MPI_Sendrecv_replace(local_B, 1, local_matrix_mpi_t,
-                             dest, 0, source, 0, grid->col_comm, &status);
+        MPI_Sendrecv_replace(localB, 1, MPI_FLOAT,
+                             dest, 0, source, 0, grid->columnComm, &status);
     } /* for */
+
+// printf("Result of %d p, %f \n",grid->myRank,*localC);
+
 
 } /* Fox */
 
@@ -150,47 +179,28 @@ int main(int argc, char **argv)
     int p;
     int my_rank;
     GridInfo grid;
-    LocalMatrix *localA;
-    LocalMatrix *localB;
-    LocalMatrix *localC;
+    float localA;
+    float localB;
+    float localC;
     int matrixOrder;
-    int n_bar;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
     initialiseGrid(&grid);
-    if (my_rank == 0)
-    {
-        printf("What's the order of the matrices?\n");
-        scanf("%d", &matrixOrder);
-    }
+    matrixOrder = grid.gridOrder;
 
     MPI_Bcast(&matrixOrder, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    n_bar = matrixOrder / grid.gridOrder;
 
-    localA = Local_matrix_allocate(n_bar);
-    localA->order = n_bar;
-    Read_matrix("Enter A", localA, &grid, n);
-    Print_matrix("We read A =", localA, &grid, n);
+    readInputMatrix("Enter A", &localA, &grid, matrixOrder);
 
-    localB = Local_matrix_allocate(n_bar);
-    localB->order = n_bar;
-    Read_matrix("Enter B", localB, &grid, n);
-    Print_matrix("We read B =", local_B, &grid, n);
+    readInputMatrix("Enter B", &localB, &grid, matrixOrder);
 
-    Build_matrix_type(localA);
-    temp_mat = Local_matrix_allocate(n_bar);
 
-    localC = Local_matrix_allocate(n_bar);
-    localC->order = n_bar;
-    Fox(n, &grid, localA, localB, localC);
 
-    Print_matrix("The product is", localC, &grid, n);
+ printf("Entry Process P:%d , A:%f , B:%f \n",grid.myRank,localA,localB);
 
-    Free_local_matrix(&localA);
-    Free_local_matrix(&localB);
-    Free_local_matrix(&localC);
+    Fox(matrixOrder, &grid, &localA, &localB, &localC);
 
     MPI_Finalize();
 }
