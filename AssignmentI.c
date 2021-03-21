@@ -13,6 +13,15 @@ typedef struct
     int dimensions;
 } Matrix;
 
+#define MAX 65536
+typedef struct
+{
+    int order;
+#define Order(A) ((A)->order)
+    float entries[MAX];
+#define entryAt(A, i, j) (*(((A)->entries) + ((A)->n_bar) * (i) + (j)))
+} LocalMatrix;
+
 typedef struct
 {
     MPI_Comm gridComm;
@@ -23,13 +32,13 @@ typedef struct
     int myRank;
     int rowNumber;
     int columnNumber;
-} ProcessInfo;
+} GridInfo;
 void readInputMatrix()
 {
 }
 
 void initialiseGrid(
-    ProcessInfo *grid /* out */)
+    GridInfo *grid /* out */)
 {
     int prevRank;
     int dimensions[2];
@@ -79,19 +88,103 @@ int indexAt(int row, int column, Matrix *m)
     return m->dimension * row + column;
 }
 
+void Fox(
+    int n /* in  */,
+    GRID_INFO_T *grid /* in  */,
+    LOCAL_MATRIX_T *local_A /* in  */,
+    LOCAL_MATRIX_T *local_B /* in  */,
+    LOCAL_MATRIX_T *local_C /* out */)
+{
+
+    LOCAL_MATRIX_T *temp_A; /* Storage for the sub-    */
+                            /* matrix of A used during */
+                            /* the current stage       */
+    int stage;
+    int bcast_root;
+    int n_bar; /* n/sqrt(p)               */
+    int source;
+    int dest;
+    MPI_Status status;
+
+    n_bar = n / grid->q;
+    Set_to_zero(local_C);
+
+    /* Calculate addresses for circular shift of B */
+    source = (grid->my_row + 1) % grid->q;
+    dest = (grid->my_row + grid->q - 1) % grid->q;
+
+    /* Set aside storage for the broadcast block of A */
+    temp_A = Local_matrix_allocate(n_bar);
+
+    for (stage = 0; stage < grid->q; stage++)
+    {
+        bcast_root = (grid->my_row + stage) % grid->q;
+        if (bcast_root == grid->my_col)
+        {
+            MPI_Bcast(local_A, 1, local_matrix_mpi_t,
+                      bcast_root, grid->row_comm);
+            Local_matrix_multiply(local_A, local_B,
+                                  local_C);
+        }
+        else
+        {
+            MPI_Bcast(temp_A, 1, local_matrix_mpi_t,
+                      bcast_root, grid->row_comm);
+            Local_matrix_multiply(temp_A, local_B,
+                                  local_C);
+        }
+        MPI_Sendrecv_replace(local_B, 1, local_matrix_mpi_t,
+                             dest, 0, source, 0, grid->col_comm, &status);
+    } /* for */
+
+} /* Fox */
+
 int main(int argc, char **argv)
 {
-    // Initialize the MPI environment
-    MPI_Init(NULL, NULL);
+    int p;
+    int my_rank;
+    GridInfo grid;
+    LocalMatrix *localA;
+    LocalMatrix *localB;
+    LocalMatrix *localC;
+    int matrixOrder;
+    int n_bar;
 
-    // Get the number of processes
-    int processCount;
-    MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
 
-    // Get the rank of the process
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int token;
-    // Finalize the MPI environment.
+    initialiseGrid(&grid);
+    if (my_rank == 0)
+    {
+        printf("What's the order of the matrices?\n");
+        scanf("%d", &matrixOrder);
+    }
+
+    MPI_Bcast(&matrixOrder, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    n_bar = matrixOrder / grid.gridOrder;
+
+    localA = Local_matrix_allocate(n_bar);
+    localA->order = n_bar;
+    Read_matrix("Enter A", localA, &grid, n);
+    Print_matrix("We read A =", localA, &grid, n);
+
+    localB = Local_matrix_allocate(n_bar);
+    localB->order = n_bar;
+    Read_matrix("Enter B", localB, &grid, n);
+    Print_matrix("We read B =", local_B, &grid, n);
+
+    Build_matrix_type(localA);
+    temp_mat = Local_matrix_allocate(n_bar);
+
+    localC = Local_matrix_allocate(n_bar);
+    localC->order = n_bar;
+    Fox(n, &grid, localA, localB, localC);
+
+    Print_matrix("The product is", localC, &grid, n);
+
+    Free_local_matrix(&localA);
+    Free_local_matrix(&localB);
+    Free_local_matrix(&localC);
+
     MPI_Finalize();
 }
