@@ -16,10 +16,10 @@ typedef struct
 #define MAX 65536
 typedef struct
 {
-    int order;
-#define Order(A) ((A)->order)
+    int localOrder;
+#define Order(A) ((A)->localOrder)
     float entries[MAX];
-#define entryAt(A, i, j) (*(((A)->entries) + ((A)->n_bar) * (i) + (j)))
+#define entryAt(A, i, j) (*(((A)->entries) + ((A)->localOrder) * (i) + (j)))
 } LocalMatrix;
 
 typedef struct
@@ -36,6 +36,17 @@ typedef struct
 void readInputMatrix()
 {
 }
+
+LocalMatrix *allocateLocalMatrix(int localOrder)
+{
+    LocalMatrix *temp = (LocalMatrix *)malloc(sizeof(LocalMatrix));
+    return temp;
+} /* Local_matrix_allocate */
+
+void freeLocalMatrix(LocalMatrix *pointerToMatrix /* in/out */)
+{
+    free(pointerToMatrix);
+} /* Free_local_matrix */
 
 void initialiseGrid(
     GridInfo *grid /* out */)
@@ -83,20 +94,15 @@ void multiplyMatrices(Matrix *first, Matrix *second)
 {
 }
 
-int indexAt(int row, int column, Matrix *m)
-{
-    return m->dimension * row + column;
-}
-
 void Fox(
     int n /* in  */,
-    GRID_INFO_T *grid /* in  */,
-    LOCAL_MATRIX_T *local_A /* in  */,
-    LOCAL_MATRIX_T *local_B /* in  */,
-    LOCAL_MATRIX_T *local_C /* out */)
+    GridInfo *grid /* in  */,
+    LocalMatrix *localA /* in  */,
+    LocalMatrix *localB /* in  */,
+    LocalMatrix *localC /* out */)
 {
 
-    LOCAL_MATRIX_T *temp_A; /* Storage for the sub-    */
+    LocalMatrix *tempA; /* Storage for the sub-    */
                             /* matrix of A used during */
                             /* the current stage       */
     int stage;
@@ -106,7 +112,7 @@ void Fox(
     int dest;
     MPI_Status status;
 
-    n_bar = n / grid->q;
+    n_bar = n / grid->gridOrder;
     Set_to_zero(local_C);
 
     /* Calculate addresses for circular shift of B */
