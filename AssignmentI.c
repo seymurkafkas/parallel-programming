@@ -7,13 +7,24 @@
 #include <math.h>
 #include <stdlib.h>
 
-typedef struct Matrix
+typedef struct
 {
     float **entries;
     int dimensions;
 } Matrix;
 
-void readInput()
+typedef struct
+{
+    MPI_Comm gridComm;
+    MPI_Comm rowCom;
+    MPI_Comm columnCom;
+    int processCount;
+    int gridOrder; //Assumed to be the square root processCount
+    int myRank;
+    int rowNumber;
+    int columnNumber;
+} ProcessInfo;
+void readInputMatrix()
 {
 }
 
