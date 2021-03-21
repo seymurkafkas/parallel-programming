@@ -72,18 +72,6 @@ void readInputMatrix(
         MPI_Recv(localA, 1, MPI_FLOAT, 0, 0, grid->gridComm, &status);
     }
 }
-/* 
-LocalMatrix *allocateLocalMatrix(int localOrder)
-{
-    LocalMatrix *temp = (LocalMatrix *)malloc(sizeof(LocalMatrix));
-    return temp;
-}
-
-void freeLocalMatrix(LocalMatrix *pointerToMatrix )
-{
-    free(pointerToMatrix);
-}
- */
 
 void initialiseGrid(
     GridInfo *grid /* out */)
