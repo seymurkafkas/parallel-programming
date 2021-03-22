@@ -123,7 +123,7 @@ void Fox(
     float *localC /* out */)
 {
 
-    int tempA;
+    float tempA;
     int stage;
     int broadcastSource;
     int source;
@@ -144,23 +144,21 @@ void Fox(
         {
             MPI_Bcast(localA, 1, MPI_FLOAT,
                       broadcastSource, grid->rowComm);
-            *localC += *localA + *localB;
-            printf("Result: %f \n",*localC);
+            *localC += *localA * *localB;
+            //    printf("Result: %f \n",*localC);
         }
         else
         {
             MPI_Bcast(&tempA, 1, MPI_FLOAT,
                       broadcastSource, grid->rowComm);
-            *localC += tempA + *localB;
+            *localC += tempA * *localB;
+            //printf("Result: %f \n",*localC);
         }
         MPI_Sendrecv_replace(localB, 1, MPI_FLOAT,
                              dest, 0, source, 0, grid->columnComm, &status);
-    } /* for */
+    } 
 
-// printf("Result of %d p, %f \n",grid->myRank,*localC);
-
-
-} /* Fox */
+} 
 
 int main(int argc, char **argv)
 {
@@ -183,10 +181,6 @@ int main(int argc, char **argv)
     readInputMatrix("Enter A", &localA, &grid, matrixOrder);
 
     readInputMatrix("Enter B", &localB, &grid, matrixOrder);
-
-
-
- printf("Entry Process P:%d , A:%f , B:%f \n",grid.myRank,localA,localB);
 
     Fox(matrixOrder, &grid, &localA, &localB, &localC);
 
