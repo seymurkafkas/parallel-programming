@@ -7,15 +7,6 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define MAX 65536
-typedef struct
-{
-    int localOrder;
-#define Order(A) ((A)->localOrder)
-    float entries[MAX];
-#define entryAt(A, i, j) (*(((A)->entries) + ((A)->localOrder) * (i) + (j)))
-} LocalMatrix;
-
 typedef struct
 {
     MPI_Comm gridComm;
@@ -29,10 +20,10 @@ typedef struct
 } GridInfo;
 
 void readInputMatrix(
-    char *text /* in  */,
-    float *localA /* out */,
-    GridInfo *grid /* in  */,
-    int n /* in  */)
+    char *text,
+    float *localA,
+    GridInfo *grid,
+    int n)
 {
     int mat_row, mat_col;
     int dest;
@@ -53,13 +44,15 @@ void readInputMatrix(
                 MPI_Cart_rank(grid->gridComm, coords, &dest);
                 if (dest == 0)
                 {
-                    printf("Enter for process %d  \n:", dest);
+                    printf("Enter for process %d :", dest);
+                    fflush(stdout);
                     scanf("%f",
                           localA);
                 }
                 else
                 {
-                    printf("Enter for process %d  \n:", dest);
+                    printf("Enter for process %d :", dest);
+                    fflush(stdout);
                     scanf("%f", &temp);
                     MPI_Send(&temp, 1, MPI_FLOAT, dest, 0,
                              grid->gridComm);
@@ -73,8 +66,7 @@ void readInputMatrix(
     }
 }
 
-void initialiseGrid(
-    GridInfo *grid /* out */)
+void initialiseGrid(GridInfo *grid)
 {
     int prevRank;
     int dimensions[2];
@@ -82,16 +74,14 @@ void initialiseGrid(
     int coordinates[2];
     int freeCoords[2];
 
-    /* Set up Global Grid Information */
+    /* Set up Grid Information */
     MPI_Comm_size(MPI_COMM_WORLD, &(grid->processCount));
     MPI_Comm_rank(MPI_COMM_WORLD, &prevRank);
 
-    /* We assume p is a perfect square */
+    /* Assume p=n^2 for some n  */
     grid->gridOrder = (int)sqrt((double)grid->processCount);
     dimensions[0] = dimensions[1] = grid->gridOrder;
 
-    /* We want a circular shift in second dimension. */
-    /* Don't care about first                        */
     isCircular[0] = 1;
     isCircular[1] = 1;
     MPI_Cart_create(MPI_COMM_WORLD, 2, dimensions,
@@ -102,12 +92,13 @@ void initialiseGrid(
     grid->rowNumber = coordinates[0];
     grid->columnNumber = coordinates[1];
 
-    /* Set up row communicators */
+    /* Set up row comm */
     freeCoords[0] = 0;
     freeCoords[1] = 1;
     MPI_Cart_sub(grid->gridComm, freeCoords,
                  &(grid->rowComm));
 
+    /* Set up column comm */
     freeCoords[0] = 1;
     freeCoords[1] = 0;
 
@@ -131,11 +122,8 @@ void Fox(
     MPI_Status status;
     *localC = 0;
 
-    /* Calculate addresses for circular shift of B */
     source = (grid->rowNumber + 1) % grid->gridOrder;
     dest = (grid->rowNumber + grid->gridOrder - 1) % grid->gridOrder;
-
-    /* Set aside storage for the broadcast block of A */
 
     for (stage = 0; stage < grid->gridOrder; ++stage)
     {
@@ -156,9 +144,8 @@ void Fox(
         }
         MPI_Sendrecv_replace(localB, 1, MPI_FLOAT,
                              dest, 0, source, 0, grid->columnComm, &status);
-    } 
-
-} 
+    }
+}
 
 int main(int argc, char **argv)
 {
