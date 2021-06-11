@@ -63,6 +63,7 @@ bool shouldReceiveEntries(int processRank, int diagonalTurnNumber, int diagonalP
 
 void receiveMessageFromProcess(ReceiveParameters *params)
 {
+    printf(" Receiving from %d\n",params->sourceProcessRank);
     MPI_Recv(params->buffer.bufferAddress, params->buffer.elementCount, params->typeOfData, params->sourceProcessRank, params->tag, params->communicator, params->statusOutputPtr);
 }
 
@@ -77,6 +78,7 @@ ReceiveParameters getReceiveParameters(int *receiveBuffer, int processRank, int 
     result.sourceProcessRank = processRank - 1;
     result.statusOutputPtr = MPI_STATUS_IGNORE;
     result.tag = 0;
+    result.typeOfData = MPI_INT; 
     result.buffer.bufferAddress = receiveBuffer;
     result.buffer.elementCount = 2;
     result.communicator = MPI_COMM_WORLD;
@@ -88,6 +90,7 @@ SendParameters getSendParameters(int *localSubMatrix, int processRank, int diago
     SendParameters result;
     result.destinationProcessRank = processRank + 1;
     result.tag = 0;
+    result.typeOfData = MPI_INT; 
     result.buffer.bufferAddress = localSubMatrix + getLocalIndexForProcess(processRank, diagonalTurnNumber, diagonalPassCount) - 2;
     result.buffer.elementCount = 2;
     result.communicator = MPI_COMM_WORLD;
@@ -200,8 +203,10 @@ int main(int argc, char **argv)
 
     int diagonalPassCount = 2 * lengthOfString - 1;
 
+    printf("%d \n",rank);
     fillLocalSubMatrix(rank, diagonalPassCount, localSubMatrix, first, second);
 
     // Finalize the MPI environment.
     MPI_Finalize();
+    
 }
