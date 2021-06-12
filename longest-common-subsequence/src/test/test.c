@@ -10,6 +10,16 @@ bool shouldProcessIdleAtTurn(int processRank, int diagonalTurnNumber, int diagon
     return true;
 }
 
+int getLocalIndexForProcess(int processRank, int diagonalTurnNumber, int diagonalPassCount)
+{
+    return diagonalTurnNumber - processRank;
+}
+
+int testSendIndex(int *localSubMatrix, int processRank, int diagonalTurnNumber, int diagonalPassCount)
+{
+    return getLocalIndexForProcess(processRank, diagonalTurnNumber, diagonalPassCount) - 2;
+}
+
 bool shouldReceiveEntries(int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     if (processRank == 0)
@@ -39,15 +49,18 @@ bool shouldSendEntries(int processRank, int diagonalTurnNumber, int diagonalPass
 
 int main()
 {
+int stringLength = 5;
+int processCount= stringLength+1;
+int totalTurn= stringLength *2 +1;
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < processCount; i++)
     {
 
         printf("Process %d \n", i);
-        for (int turn = 0; turn < 7; turn++)
+        for (int turn = 0; turn < totalTurn; turn++)
         {
 
-            if (!shouldProcessIdleAtTurn(i, turn, 7))
+            if (!shouldProcessIdleAtTurn(i, turn, totalTurn))
             {
                 printf(" %d Not Idle", turn);
             }
@@ -56,13 +69,13 @@ int main()
                 printf(" %d Idle", turn);
             }
 
-            if (shouldReceiveEntries(i, turn, 7))
+            if (shouldReceiveEntries(i, turn, totalTurn))
             {
                 printf(" %d Receive ", turn);
             }
-            if (shouldSendEntries(i, turn, 7))
+            if (shouldSendEntries(i, turn, totalTurn))
             {
-                printf(" %d Send ", turn);
+                printf(" %d Send from Index: %d", turn, testSendIndex(NULL,i,turn,totalTurn));
             }
             printf("\n");
         }
