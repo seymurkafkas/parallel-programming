@@ -166,6 +166,12 @@ bool shouldProcessIdleAtTurn(int processRank, int diagonalTurnNumber, int diagon
     return true;
 }
 
+bool shouldProcessComputeAtTurn(int processRank, int diagonalTurnNumber, int diagonalPassCount)
+{
+    return diagonalTurnNumber-processRank <  (diagonalPassCount + 1) / 2 && diagonalTurnNumber -processRank >= 0;
+
+}
+
 void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMatrix, const char *first, const char *second)
 {
     for (int diagonalTurn = 0; diagonalTurn < diagonalPassCount; diagonalTurn++)
@@ -183,7 +189,11 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
             {
                 receiveEntriesFromPrevProcess(receiveBuffer, processRank, diagonalTurn, diagonalPassCount);
             }
-            computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank==0)?'\0':second[processRank-1]);
+            if (shouldProcessComputeAtTurn(processRank, diagonalTurn, diagonalPassCount))
+            {
+                computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank==0)?'\0':second[processRank-1]);
+
+            }
         }
     }
 }
@@ -208,12 +218,13 @@ int main(int argc, char **argv)
 
     int diagonalPassCount = 2 * lengthOfString +1 ;
     MPI_Barrier( MPI_COMM_WORLD);
-    printf("%d \n",rank);
+    //printf("%d \n",rank);
     fillLocalSubMatrix(rank, diagonalPassCount, localSubMatrix, first, second);
 
 if(rank==5){
     printf("Result is %d",localSubMatrix[5]);
 }
+
     MPI_Finalize();
     
 }
