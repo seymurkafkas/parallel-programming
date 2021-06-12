@@ -63,7 +63,6 @@ bool shouldReceiveEntries(int processRank, int diagonalTurnNumber, int diagonalP
 
 void receiveMessageFromProcess(ReceiveParameters *params)
 {
-    printf(" Receiving from %d\n",params->sourceProcessRank);
     MPI_Recv(params->buffer.bufferAddress, params->buffer.elementCount, params->typeOfData, params->sourceProcessRank, params->tag, params->communicator, params->statusOutputPtr);
 }
 
@@ -100,12 +99,15 @@ SendParameters getSendParameters(int *localSubMatrix, int processRank, int diago
 void sendEntriesToNextProcess(int *localSubMatrix, int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     SendParameters parameters = getSendParameters(localSubMatrix, processRank, diagonalTurnNumber, diagonalPassCount);
+            printf(" Process %d Sending to %d\n",processRank,parameters.destinationProcessRank);
+
     sendMessageToProcess(&parameters);
 }
 
 void receiveEntriesFromPrevProcess(int *outReceiveBuffer, int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     ReceiveParameters parameters = getReceiveParameters(outReceiveBuffer, processRank, diagonalTurnNumber, diagonalPassCount);
+            printf(" Process %d Receiving from %d\n",processRank,parameters.sourceProcessRank);
     receiveMessageFromProcess(&parameters);
 }
 
@@ -141,9 +143,10 @@ void computeLocalValueIfApplicable(int *receiveBuffer, int processRank, int *loc
     }
     else
     {
-        if (firstString[index] == comparedChar)
+        if (firstString[index-1] == comparedChar)
         {
             int receivedDiagonal = receiveBuffer[0]; //getMessage();
+            localSubMatrix[index] = receivedDiagonal+1;
         }
         else
         {
@@ -170,6 +173,7 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
         int receiveBuffer[2];
         if (!shouldProcessIdleAtTurn(processRank, diagonalTurn, diagonalPassCount))
         {
+            printf("    Process %d iteration %d: \n",processRank,diagonalTurn);
             int localIndex = getLocalIndexForProcess(processRank, diagonalTurn, diagonalPassCount);
             if (shouldSendEntries(processRank, diagonalTurn, diagonalPassCount))
             {
@@ -179,7 +183,7 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
             {
                 receiveEntriesFromPrevProcess(receiveBuffer, processRank, diagonalTurn, diagonalPassCount);
             }
-            computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, second[processRank]);
+            computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank==0)?'\0':second[processRank-1]);
         }
     }
 }
@@ -190,23 +194,26 @@ int main(int argc, char **argv)
     MPI_Init(NULL, NULL);
 
     const char *first = "hello";
-    const char *second = "holla";
+    const char *second = "hollo";
     int lengthOfString = 5;
     // Get the number of processes
     int processCount;
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
     // Get the rank of the process
+    //printf("HERE: %d \n",processCount);
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString);
+    int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString+1);
 
-    int diagonalPassCount = 2 * lengthOfString - 1;
-
+    int diagonalPassCount = 2 * lengthOfString +1 ;
+    MPI_Barrier( MPI_COMM_WORLD);
     printf("%d \n",rank);
     fillLocalSubMatrix(rank, diagonalPassCount, localSubMatrix, first, second);
 
-    // Finalize the MPI environment.
+if(rank==5){
+    printf("Result is %d",localSubMatrix[5]);
+}
     MPI_Finalize();
     
 }
