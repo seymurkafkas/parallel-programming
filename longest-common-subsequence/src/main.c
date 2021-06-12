@@ -172,6 +172,44 @@ bool shouldProcessComputeAtTurn(int processRank, int diagonalTurnNumber, int dia
 
 }
 
+void getResult(int * result, int *localSubMatrix, int processRank,int diagonalPassCount){
+
+
+    if(processRank==0){
+
+    ReceiveParameters params;
+    params.sourceProcessRank = (diagonalPassCount-1) /2;
+    params.statusOutputPtr = MPI_STATUS_IGNORE;
+    params.tag = 0;
+    params.typeOfData = MPI_INT; 
+    params.buffer.bufferAddress = result;
+    params.buffer.elementCount = 1;
+    params.communicator = MPI_COMM_WORLD;
+    receiveMessageFromProcess(&params);
+    }
+
+    else if(processRank==(diagonalPassCount-1) /2){
+
+    SendParameters params;
+    params.destinationProcessRank = 0;
+    params.tag = 0;
+    params.typeOfData = MPI_INT; 
+    params.buffer.bufferAddress = localSubMatrix + (diagonalPassCount-1) /2;
+    params.buffer.elementCount = 1;
+    params.communicator = MPI_COMM_WORLD;
+    sendMessageToProcess(&params);
+
+    }
+
+    else {return;}
+}
+
+void printResult(int * result, int processRank){
+    if(processRank==0){
+    printf("The result is %d",*result);
+    }
+}
+
 void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMatrix, const char *first, const char *second)
 {
     for (int diagonalTurn = 0; diagonalTurn < diagonalPassCount; diagonalTurn++)
@@ -203,9 +241,9 @@ int main(int argc, char **argv)
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
 
-    const char *first = "hello";
-    const char *second = "hollo";
-    int lengthOfString = 5;
+    const char *first = "helloakp";
+    const char *second = "hollokpm";
+    int lengthOfString = 8;
     // Get the number of processes
     int processCount;
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
@@ -220,11 +258,9 @@ int main(int argc, char **argv)
     MPI_Barrier( MPI_COMM_WORLD);
     //printf("%d \n",rank);
     fillLocalSubMatrix(rank, diagonalPassCount, localSubMatrix, first, second);
-
-if(rank==5){
-    printf("Result is %d",localSubMatrix[5]);
-}
-
+int result;
+getResult(&result,localSubMatrix,rank,diagonalPassCount);
+printResult(&result,rank);
     MPI_Finalize();
     
 }
