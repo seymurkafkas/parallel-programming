@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 #include <stdbool.h>
 
 typedef struct
@@ -77,7 +78,7 @@ ReceiveParameters getReceiveParameters(int *receiveBuffer, int processRank, int 
     result.sourceProcessRank = processRank - 1;
     result.statusOutputPtr = MPI_STATUS_IGNORE;
     result.tag = 0;
-    result.typeOfData = MPI_INT; 
+    result.typeOfData = MPI_INT;
     result.buffer.bufferAddress = receiveBuffer;
     result.buffer.elementCount = 2;
     result.communicator = MPI_COMM_WORLD;
@@ -89,7 +90,7 @@ SendParameters getSendParameters(int *localSubMatrix, int processRank, int diago
     SendParameters result;
     result.destinationProcessRank = processRank + 1;
     result.tag = 0;
-    result.typeOfData = MPI_INT; 
+    result.typeOfData = MPI_INT;
     result.buffer.bufferAddress = localSubMatrix + getLocalIndexForProcess(processRank, diagonalTurnNumber, diagonalPassCount) - 2;
     result.buffer.elementCount = 2;
     result.communicator = MPI_COMM_WORLD;
@@ -99,7 +100,7 @@ SendParameters getSendParameters(int *localSubMatrix, int processRank, int diago
 void sendEntriesToNextProcess(int *localSubMatrix, int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     SendParameters parameters = getSendParameters(localSubMatrix, processRank, diagonalTurnNumber, diagonalPassCount);
-            printf(" Process %d Sending to %d\n",processRank,parameters.destinationProcessRank);
+    printf(" Process %d Sending to %d\n", processRank, parameters.destinationProcessRank);
 
     sendMessageToProcess(&parameters);
 }
@@ -107,7 +108,7 @@ void sendEntriesToNextProcess(int *localSubMatrix, int processRank, int diagonal
 void receiveEntriesFromPrevProcess(int *outReceiveBuffer, int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     ReceiveParameters parameters = getReceiveParameters(outReceiveBuffer, processRank, diagonalTurnNumber, diagonalPassCount);
-            printf(" Process %d Receiving from %d\n",processRank,parameters.sourceProcessRank);
+    printf(" Process %d Receiving from %d\n", processRank, parameters.sourceProcessRank);
     receiveMessageFromProcess(&parameters);
 }
 
@@ -143,10 +144,10 @@ void computeLocalValueIfApplicable(int *receiveBuffer, int processRank, int *loc
     }
     else
     {
-        if (firstString[index-1] == comparedChar)
+        if (firstString[index - 1] == comparedChar)
         {
             int receivedDiagonal = receiveBuffer[0]; //getMessage();
-            localSubMatrix[index] = receivedDiagonal+1;
+            localSubMatrix[index] = receivedDiagonal + 1;
         }
         else
         {
@@ -168,45 +169,50 @@ bool shouldProcessIdleAtTurn(int processRank, int diagonalTurnNumber, int diagon
 
 bool shouldProcessComputeAtTurn(int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
-    return diagonalTurnNumber-processRank <  (diagonalPassCount + 1) / 2 && diagonalTurnNumber -processRank >= 0;
-
+    return diagonalTurnNumber - processRank < (diagonalPassCount + 1) / 2 && diagonalTurnNumber - processRank >= 0;
 }
 
-void getResult(int * result, int *localSubMatrix, int processRank,int diagonalPassCount){
+void getResult(int *result, int *localSubMatrix, int processRank, int diagonalPassCount)
+{
 
+    if (processRank == 0)
+    {
 
-    if(processRank==0){
-
-    ReceiveParameters params;
-    params.sourceProcessRank = (diagonalPassCount-1) /2;
-    params.statusOutputPtr = MPI_STATUS_IGNORE;
-    params.tag = 0;
-    params.typeOfData = MPI_INT; 
-    params.buffer.bufferAddress = result;
-    params.buffer.elementCount = 1;
-    params.communicator = MPI_COMM_WORLD;
-    receiveMessageFromProcess(&params);
+        ReceiveParameters params;
+        params.sourceProcessRank = (diagonalPassCount - 1) / 2;
+        params.statusOutputPtr = MPI_STATUS_IGNORE;
+        params.tag = 0;
+        params.typeOfData = MPI_INT;
+        params.buffer.bufferAddress = result;
+        params.buffer.elementCount = 1;
+        params.communicator = MPI_COMM_WORLD;
+        receiveMessageFromProcess(&params);
     }
 
-    else if(processRank==(diagonalPassCount-1) /2){
+    else if (processRank == (diagonalPassCount - 1) / 2)
+    {
 
-    SendParameters params;
-    params.destinationProcessRank = 0;
-    params.tag = 0;
-    params.typeOfData = MPI_INT; 
-    params.buffer.bufferAddress = localSubMatrix + (diagonalPassCount-1) /2;
-    params.buffer.elementCount = 1;
-    params.communicator = MPI_COMM_WORLD;
-    sendMessageToProcess(&params);
-
+        SendParameters params;
+        params.destinationProcessRank = 0;
+        params.tag = 0;
+        params.typeOfData = MPI_INT;
+        params.buffer.bufferAddress = localSubMatrix + (diagonalPassCount - 1) / 2;
+        params.buffer.elementCount = 1;
+        params.communicator = MPI_COMM_WORLD;
+        sendMessageToProcess(&params);
     }
 
-    else {return;}
+    else
+    {
+        return;
+    }
 }
 
-void printResult(int * result, int processRank){
-    if(processRank==0){
-    printf("The result is %d",*result);
+void printResult(int *result, int processRank)
+{
+    if (processRank == 0)
+    {
+        printf("The result is %d", *result);
     }
 }
 
@@ -217,7 +223,7 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
         int receiveBuffer[2];
         if (!shouldProcessIdleAtTurn(processRank, diagonalTurn, diagonalPassCount))
         {
-            printf("    Process %d iteration %d: \n",processRank,diagonalTurn);
+            printf("    Process %d iteration %d: \n", processRank, diagonalTurn);
             int localIndex = getLocalIndexForProcess(processRank, diagonalTurn, diagonalPassCount);
             if (shouldSendEntries(processRank, diagonalTurn, diagonalPassCount))
             {
@@ -229,10 +235,51 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
             }
             if (shouldProcessComputeAtTurn(processRank, diagonalTurn, diagonalPassCount))
             {
-                computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank==0)?'\0':second[processRank-1]);
-
+                computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank == 0) ? '\0' : second[processRank - 1]);
             }
         }
+    }
+}
+
+char *getInputStrings(int processRank, int processCount)
+{
+    char *first, *second;
+    int stringSize;
+
+    if (processRank == 0)
+    {
+        first = malloc((processCount - 1) * sizeof(char));
+        second = malloc((processCount - 1) * sizeof(char));
+
+        if (strlen(first) != processCount - 1 || strlen(second) != processCount - 1)
+        {
+
+            printf("Invalid number of characters, make sure the number of characters are 1 less than the assigned number of processes");
+            return NULL;
+        }
+        else
+        {
+            for (int dest = 1; dest < processCount; dest++)
+            {
+                SendParameters params;
+                params.destinationProcessRank = dest;
+                params.tag = 0;
+                params.typeOfData = MPI_CHAR;
+                params.buffer.bufferAddress = (void*)first;
+                params.buffer.elementCount = processCount - 1;
+                params.communicator = MPI_COMM_WORLD;
+                sendMessageToProcess(&params);
+
+                params.buffer.bufferAddress = (void*)second + dest - 1;
+                params.buffer.elementCount = 1;
+                sendMessageToProcess(&params);
+            }
+        }
+    }
+    else
+    {
+
+        
     }
 }
 
@@ -252,15 +299,14 @@ int main(int argc, char **argv)
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString+1);
+    int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString + 1);
 
-    int diagonalPassCount = 2 * lengthOfString +1 ;
-    MPI_Barrier( MPI_COMM_WORLD);
+    int diagonalPassCount = 2 * lengthOfString + 1;
+    MPI_Barrier(MPI_COMM_WORLD);
     //printf("%d \n",rank);
     fillLocalSubMatrix(rank, diagonalPassCount, localSubMatrix, first, second);
-int result;
-getResult(&result,localSubMatrix,rank,diagonalPassCount);
-printResult(&result,rank);
+    int result;
+    getResult(&result, localSubMatrix, rank, diagonalPassCount);
+    printResult(&result, rank);
     MPI_Finalize();
-    
 }
