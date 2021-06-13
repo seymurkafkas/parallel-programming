@@ -40,7 +40,6 @@ typedef struct
     int *localSubMatrix;
     const char *firstString;
     char characterInString;
-
 } LocalData;
 
 int getLocalIndexForProcess(int processRank, int diagonalTurnNumber, int diagonalPassCount)
@@ -100,14 +99,12 @@ SendParameters getSendParameters(int *localSubMatrix, int processRank, int diago
 void sendEntriesToNextProcess(int *localSubMatrix, int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     SendParameters parameters = getSendParameters(localSubMatrix, processRank, diagonalTurnNumber, diagonalPassCount);
-    printf(" Process %d Sending to %d\n", processRank, parameters.destinationProcessRank);
     sendMessageToProcess(&parameters);
 }
 
 void receiveEntriesFromPrevProcess(int *outReceiveBuffer, int processRank, int diagonalTurnNumber, int diagonalPassCount)
 {
     ReceiveParameters parameters = getReceiveParameters(outReceiveBuffer, processRank, diagonalTurnNumber, diagonalPassCount);
-    printf(" Process %d Receiving from %d\n", processRank, parameters.sourceProcessRank);
     receiveMessageFromProcess(&parameters);
 }
 
@@ -173,10 +170,8 @@ bool shouldProcessComputeAtTurn(int processRank, int diagonalTurnNumber, int dia
 
 void getResult(int *result, int *localSubMatrix, int processRank, int diagonalPassCount)
 {
-
     if (processRank == 0)
     {
-
         ReceiveParameters params;
         params.sourceProcessRank = (diagonalPassCount - 1) / 2;
         params.statusOutputPtr = MPI_STATUS_IGNORE;
@@ -190,7 +185,6 @@ void getResult(int *result, int *localSubMatrix, int processRank, int diagonalPa
 
     else if (processRank == (diagonalPassCount - 1) / 2)
     {
-
         SendParameters params;
         params.destinationProcessRank = 0;
         params.tag = 0;
@@ -222,7 +216,6 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
         int receiveBuffer[2];
         if (!shouldProcessIdleAtTurn(processRank, diagonalTurn, diagonalPassCount))
         {
-            printf("    Process %d iteration %d: \n", processRank, diagonalTurn);
             int localIndex = getLocalIndexForProcess(processRank, diagonalTurn, diagonalPassCount);
             if (shouldSendEntries(processRank, diagonalTurn, diagonalPassCount))
             {
@@ -247,10 +240,10 @@ void getInputStrings(char **first, char **second, int processRank, int processCo
     if (processRank == 0)
     {
         *second = (char *)malloc((processCount) * sizeof(char));
-        printf("Enter the first string (With length %d):\n",processCount-1);
+        printf("Enter the first string (With length %d):\n", processCount - 1);
         fflush(stdout);
         scanf("%s", *first);
-        printf("Enter the second string (With length %d):\n",processCount-1);
+        printf("Enter the second string (With length %d):\n", processCount - 1);
         fflush(stdout);
         scanf("%s", *second);
         if (strlen(*first) != processCount - 1 || strlen(*second) != processCount - 1)
@@ -301,26 +294,12 @@ int main(int argc, char **argv)
 {
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
-
-    //const char *first = "helloakp";
-    //const char *second = "hollokpm";
     int lengthOfString = 8;
-    // Get the number of processes
-    int processCount;
+    int processCount, rank;
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
-    // Get the rank of the process
-    //printf("HERE: %d \n",processCount);
-
-    int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-    char *first;
-    char *second;
-
+    char *first, *second;
     getInputStrings(&first, &second, rank, processCount);
-
-    printf("Process %d received: %s \n", rank, first);
-    printf("Process %d received: %c \n", rank, *second);
     int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString + 1);
     int diagonalPassCount = 2 * lengthOfString + 1;
     MPI_Barrier(MPI_COMM_WORLD);

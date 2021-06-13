@@ -49,13 +49,12 @@ bool shouldSendEntries(int processRank, int diagonalTurnNumber, int diagonalPass
 
 int main()
 {
-int stringLength = 5;
-int processCount= stringLength+1;
-int totalTurn= stringLength *2 +1;
+    int stringLength = 5;
+    int processCount = stringLength + 1;
+    int totalTurn = stringLength * 2 + 1;
 
     for (int i = 0; i < processCount; i++)
     {
-
         printf("Process %d \n", i);
         for (int turn = 0; turn < totalTurn; turn++)
         {
@@ -75,7 +74,7 @@ int totalTurn= stringLength *2 +1;
             }
             if (shouldSendEntries(i, turn, totalTurn))
             {
-                printf(" %d Send from Index: %d", turn, testSendIndex(NULL,i,turn,totalTurn));
+                printf(" %d Send from Index: %d", turn, testSendIndex(NULL, i, turn, totalTurn));
             }
             printf("\n");
         }
