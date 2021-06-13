@@ -241,15 +241,16 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
     }
 }
 
-char *getInputStrings(int processRank, int processCount)
+char *getInputStrings(char *first, char *second, int processRank, int processCount)
 {
-    char *first, *second;
     int stringSize;
+    first = malloc((processCount - 1) * sizeof(char));
 
     if (processRank == 0)
     {
-        first = malloc((processCount - 1) * sizeof(char));
         second = malloc((processCount - 1) * sizeof(char));
+        scanf("Enter the first string:%s", first);
+        scanf("Enter the second string:%s", second);
 
         if (strlen(first) != processCount - 1 || strlen(second) != processCount - 1)
         {
@@ -265,12 +266,12 @@ char *getInputStrings(int processRank, int processCount)
                 params.destinationProcessRank = dest;
                 params.tag = 0;
                 params.typeOfData = MPI_CHAR;
-                params.buffer.bufferAddress = (void*)first;
+                params.buffer.bufferAddress = (void *)first;
                 params.buffer.elementCount = processCount - 1;
                 params.communicator = MPI_COMM_WORLD;
                 sendMessageToProcess(&params);
 
-                params.buffer.bufferAddress = (void*)second + dest - 1;
+                params.buffer.bufferAddress = (void *)second + dest - 1;
                 params.buffer.elementCount = 1;
                 sendMessageToProcess(&params);
             }
@@ -279,7 +280,20 @@ char *getInputStrings(int processRank, int processCount)
     else
     {
 
-        
+        second = malloc(1 * sizeof(char));
+        ReceiveParameters params;
+        params.sourceProcessRank = 0;
+        params.statusOutputPtr = MPI_STATUS_IGNORE;
+        params.tag = 0;
+        params.typeOfData = MPI_CHAR;
+        params.buffer.bufferAddress = (void *)first;
+        params.buffer.elementCount = processCount - 1;
+        params.communicator = MPI_COMM_WORLD;
+        receiveMessageFromProcess(&params);
+
+        params.buffer.bufferAddress = (void *)second;
+        params.buffer.elementCount = 1;
+        receiveMessageFromProcess(&params);
     }
 }
 
