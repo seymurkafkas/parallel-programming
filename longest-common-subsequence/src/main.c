@@ -101,7 +101,6 @@ void sendEntriesToNextProcess(int *localSubMatrix, int processRank, int diagonal
 {
     SendParameters parameters = getSendParameters(localSubMatrix, processRank, diagonalTurnNumber, diagonalPassCount);
     printf(" Process %d Sending to %d\n", processRank, parameters.destinationProcessRank);
-
     sendMessageToProcess(&parameters);
 }
 
@@ -245,20 +244,17 @@ void getInputStrings(char **first, char **second, int processRank, int processCo
 {
     int stringSize;
     *first = (char *)malloc((processCount) * sizeof(char));
-
     if (processRank == 0)
     {
         *second = (char *)malloc((processCount) * sizeof(char));
-        printf("Enter the first string (With length 1 fewer than the number of processes):\n");
+        printf("Enter the first string (With length %d):\n",processCount-1);
         fflush(stdout);
         scanf("%s", *first);
-        printf("Enter the second string (With length 1 fewer than the number of processes):\n");
+        printf("Enter the second string (With length %d):\n",processCount-1);
         fflush(stdout);
         scanf("%s", *second);
-
         if (strlen(*first) != processCount - 1 || strlen(*second) != processCount - 1)
         {
-
             printf("Invalid number of characters, make sure the number of characters is 1 fewer than the assigned number of processes\n");
             fflush(stdout);
             return;
@@ -284,8 +280,6 @@ void getInputStrings(char **first, char **second, int processRank, int processCo
     }
     else
     {
-        printf("Worker");
-
         *second = (char *)malloc(1 * sizeof(char));
         ReceiveParameters params;
         params.sourceProcessRank = 0;
