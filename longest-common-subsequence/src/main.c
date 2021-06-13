@@ -235,28 +235,33 @@ void fillLocalSubMatrix(int processRank, int diagonalPassCount, int *localSubMat
             }
             if (shouldProcessComputeAtTurn(processRank, diagonalTurn, diagonalPassCount))
             {
-                computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank == 0) ? '\0' : second[processRank - 1]);
+                computeLocalValueIfApplicable(receiveBuffer, processRank, localSubMatrix, localIndex, first, (processRank == 0) ? '\0' : *second);
             }
         }
     }
 }
 
-char *getInputStrings(char *first, char *second, int processRank, int processCount)
+void getInputStrings(char **first, char **second, int processRank, int processCount)
 {
     int stringSize;
-    first = malloc((processCount - 1) * sizeof(char));
+    *first = (char *)malloc((processCount) * sizeof(char));
 
     if (processRank == 0)
     {
-        second = malloc((processCount - 1) * sizeof(char));
-        scanf("Enter the first string:%s", first);
-        scanf("Enter the second string:%s", second);
+        *second = (char *)malloc((processCount) * sizeof(char));
+        printf("Enter the first string (With length 1 fewer than the number of processes):\n");
+        fflush(stdout);
+        scanf("%s", *first);
+        printf("Enter the second string (With length 1 fewer than the number of processes):\n");
+        fflush(stdout);
+        scanf("%s", *second);
 
-        if (strlen(first) != processCount - 1 || strlen(second) != processCount - 1)
+        if (strlen(*first) != processCount - 1 || strlen(*second) != processCount - 1)
         {
 
-            printf("Invalid number of characters, make sure the number of characters are 1 less than the assigned number of processes");
-            return NULL;
+            printf("Invalid number of characters, make sure the number of characters is 1 fewer than the assigned number of processes\n");
+            fflush(stdout);
+            return;
         }
         else
         {
@@ -266,12 +271,12 @@ char *getInputStrings(char *first, char *second, int processRank, int processCou
                 params.destinationProcessRank = dest;
                 params.tag = 0;
                 params.typeOfData = MPI_CHAR;
-                params.buffer.bufferAddress = (void *)first;
-                params.buffer.elementCount = processCount - 1;
+                params.buffer.bufferAddress = (void *)*first;
+                params.buffer.elementCount = processCount;
                 params.communicator = MPI_COMM_WORLD;
                 sendMessageToProcess(&params);
 
-                params.buffer.bufferAddress = (void *)second + dest - 1;
+                params.buffer.bufferAddress = (void *)*second + dest - 1;
                 params.buffer.elementCount = 1;
                 sendMessageToProcess(&params);
             }
@@ -279,19 +284,20 @@ char *getInputStrings(char *first, char *second, int processRank, int processCou
     }
     else
     {
+        printf("Worker");
 
-        second = malloc(1 * sizeof(char));
+        *second = (char *)malloc(1 * sizeof(char));
         ReceiveParameters params;
         params.sourceProcessRank = 0;
         params.statusOutputPtr = MPI_STATUS_IGNORE;
         params.tag = 0;
         params.typeOfData = MPI_CHAR;
-        params.buffer.bufferAddress = (void *)first;
-        params.buffer.elementCount = processCount - 1;
+        params.buffer.bufferAddress = (void *)*first;
+        params.buffer.elementCount = processCount;
         params.communicator = MPI_COMM_WORLD;
         receiveMessageFromProcess(&params);
 
-        params.buffer.bufferAddress = (void *)second;
+        params.buffer.bufferAddress = (void *)*second;
         params.buffer.elementCount = 1;
         receiveMessageFromProcess(&params);
     }
@@ -302,22 +308,28 @@ int main(int argc, char **argv)
     // Initialize the MPI environment
     MPI_Init(NULL, NULL);
 
-    const char *first = "helloakp";
-    const char *second = "hollokpm";
+    //const char *first = "helloakp";
+    //const char *second = "hollokpm";
     int lengthOfString = 8;
     // Get the number of processes
     int processCount;
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
     // Get the rank of the process
     //printf("HERE: %d \n",processCount);
+
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString + 1);
+    char *first;
+    char *second;
 
+    getInputStrings(&first, &second, rank, processCount);
+
+    printf("Process %d received: %s \n", rank, first);
+    printf("Process %d received: %c \n", rank, *second);
+    int *localSubMatrix = allocateMemoryForSubMatrix(lengthOfString + 1);
     int diagonalPassCount = 2 * lengthOfString + 1;
     MPI_Barrier(MPI_COMM_WORLD);
-    //printf("%d \n",rank);
     fillLocalSubMatrix(rank, diagonalPassCount, localSubMatrix, first, second);
     int result;
     getResult(&result, localSubMatrix, rank, diagonalPassCount);
