@@ -1,7 +1,3 @@
-/* Fox's Algorithm for Matrix Multiplication
- *    Author: Seymur Kafkas
- */
-
 #include <mpi.h>
 #include <stdio.h>
 #include <math.h>
@@ -13,7 +9,7 @@ typedef struct
     MPI_Comm rowComm;
     MPI_Comm columnComm;
     int processCount;
-    int gridOrder; //Assumed to be the square root processCount
+    int gridOrder; // Assumed to be the square root processCount
     int myRank;
     int rowNumber;
     int columnNumber;
@@ -133,14 +129,12 @@ void Fox(
             MPI_Bcast(localA, 1, MPI_FLOAT,
                       broadcastSource, grid->rowComm);
             *localC += *localA * *localB;
-            //    printf("Result: %f \n",*localC);
         }
         else
         {
             MPI_Bcast(&tempA, 1, MPI_FLOAT,
                       broadcastSource, grid->rowComm);
             *localC += tempA * *localB;
-            //printf("Result: %f \n",*localC);
         }
         MPI_Sendrecv_replace(localB, 1, MPI_FLOAT,
                              dest, 0, source, 0, grid->columnComm, &status);
@@ -159,17 +153,11 @@ int main(int argc, char **argv)
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-
     initialiseGrid(&grid);
     matrixOrder = grid.gridOrder;
-
     MPI_Bcast(&matrixOrder, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
     readInputMatrix("Enter A", &localA, &grid, matrixOrder);
-
     readInputMatrix("Enter B", &localB, &grid, matrixOrder);
-
     Fox(matrixOrder, &grid, &localA, &localB, &localC);
-
     MPI_Finalize();
 }
