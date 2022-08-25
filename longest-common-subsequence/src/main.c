@@ -1,7 +1,3 @@
-/* The Longest Common Subsequence
-        Author: Seymur Kafkas
- */
-
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -142,13 +138,13 @@ void computeLocalValueIfApplicable(int *receiveBuffer, int processRank, int *loc
     {
         if (firstString[index - 1] == comparedChar)
         {
-            int receivedDiagonal = receiveBuffer[0]; //getMessage();
+            int receivedDiagonal = receiveBuffer[0]; // getMessage();
             localSubMatrix[index] = receivedDiagonal + 1;
         }
         else
         {
             int upperSubResult = localSubMatrix[index - 1];
-            int leftSubResult = receiveBuffer[1]; //getMessage();
+            int leftSubResult = receiveBuffer[1]; // getMessage();
             localSubMatrix[index] = max(leftSubResult, upperSubResult);
         }
     }
@@ -292,7 +288,6 @@ void getInputStrings(char **first, char **second, int processRank, int processCo
 
 int main(int argc, char **argv)
 {
-    // Initialize the MPI environment
     MPI_Init(NULL, NULL);
     int lengthOfString = 8;
     int processCount, rank;
